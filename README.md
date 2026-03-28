@@ -42,8 +42,7 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
 
 1. **Download** the latest release from the [Releases](../../releases) page
 2. **Run** `Type-Chart-Editor-Setup.exe`
-3. **Follow** the installer prompts
-4. **Launch** the application from your Start Menu or Desktop shortcut
+4. **Launch** the application from your Desktop shortcut
 
 ### System Requirements
 - **Windows 7 or later** (64-bit recommended)
