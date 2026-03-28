@@ -46,7 +46,6 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
 
 ### System Requirements
 - **Windows 7 or later** (64-bit recommended)
-- **50 MB** free disk space
 - No additional software required
 
 ## Quick Start
