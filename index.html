@@ -409,6 +409,9 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
       <button class="tbtn" onclick="exportCSV()" title="Export chart as CSV spreadsheet">
       📊 Export CSV
     </button>
+    <button class="tbtn" onclick="openCodeExportModal()" title="Export chart as C code (pokeemerald/pokefirered decomp format)">
+      &lt;/&gt; Export Code
+    </button>
     <input type="file" id="import-file" accept=".json" onchange="importJSON(event)">
   </div>
 </div>
@@ -423,6 +426,7 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
       <button class="tbtn warn" onclick="clearAll()">🗑 Clear The Chart</button>
       <button class="tbtn" onclick="undo()" title="Undo (Ctrl+Z)">↩ Undo</button>
       <button class="tbtn" onclick="redo()" title="Redo (Ctrl+Y)">↪ Redo</button>
+      <button id="heatmapBtn" class="tbtn" onclick="toggleHeatmap()" title="Toggle threat score heatmap overlay">🌡 <span style="background:linear-gradient(90deg,#4ade80,#f7d02c,#f95587);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800">Heatmap</span></button>
       <button class="tbtn" onclick="openTypeModal('add')" style="color:#4ade80;border-color:#4ade80">＋ Add Type</button>
       <button class="tbtn" onclick="openTypeModal('remove')" style="color:#f95587;border-color:#f95587">− Remove Type</button>
       <span style="width:1px;background:var(--border);height:20px;margin:0 2px"></span>
@@ -451,6 +455,27 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:320px;max-width:90vw">
     <h3 id="typeModalTitle" style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text)"></h3>
     <div id="typeModalBody"></div>
+  </div>
+</div>
+
+<!-- Code Export Modal -->
+<div id="codeExportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:12px" onclick="if(event.target===this)closeCodeExportModal()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:min(900px,94vw);max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px;font-weight:700;color:var(--text);flex:1">&lt;/&gt; Export Code — Decomp Format</span>
+      <select id="codeFormatSelect" onchange="refreshCodeExport()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;font-family:inherit">
+        <option value="pokeemerald">pokeemerald / pokefirered</option>
+        <option value="hexmaniac">HexManiacAdvance (GBA Binary Table)</option>
+        <option value="simple">Simple C Array</option>
+        <option value="csharp">C# 2D Array</option>
+        <option value="python">Python Dict</option>
+        <option value="json_flat">JSON Flat</option>
+      </select>
+      <button onclick="downloadCodeExport()" style="padding:5px 14px;background:var(--accent);border:none;color:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">⬇ Download</button>
+      <button onclick="copyCodeExport()" style="padding:5px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-size:12px">📋 Copy</button>
+      <button onclick="closeCodeExportModal()" style="padding:5px 10px;background:none;border:1px solid var(--border);color:var(--dim);border-radius:6px;cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <pre id="codeExportContent" style="margin:0;padding:14px 16px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#c9d1d9;background:#0d1117;flex:1;border-radius:0 0 12px 12px;white-space:pre;line-height:1.5"></pre>
   </div>
 </div>
 
@@ -517,16 +542,17 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
       </div>
     </div>
 
-    <div class="sb-section">
-      <div class="sb-label">⚔️ Offensive Coverage</div>
-      <div style="font-size:10px;color:var(--dim);margin-bottom:6px">Pick up to 3 attack types to see what's NOT covered (no SE hit)</div>
-      <div id="covToolChips" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px"></div>
-      <button onclick="runCovTool()" style="width:100%;font-size:11px;padding:5px;background:var(--accent);border:none;color:white;border-radius:5px;cursor:pointer;font-weight:700;margin-bottom:6px">Check Coverage</button>
-      <div id="covToolResult"></div>
-    </div>
   </div>
 
   <div class="tt-main">
+    <div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+      <button id="mainTab-combos" onclick="setMainTab('combos')" style="padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--text);cursor:pointer">📊 Combo Chart</button>
+      <button id="mainTab-overall" onclick="setMainTab('overall')" style="padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer">🗺 Balance & Overall Coverage</button>
+      <button id="mainTab-team" onclick="setMainTab('team')" style="padding:8px 18px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer">🫂 Team Analyzer</button>
+    </div>
+
+    <!-- Combo Chart view -->
+    <div id="view-combos" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">
     <div class="tt-legend">
       <span style="font-size:0.72rem;color:var(--dim);margin-right:4px;font-weight:700">ATK coverage:</span>
       <div class="ll"><div class="ls" style="background:#1a1a4a"></div>0×</div>
@@ -552,6 +578,25 @@ body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono',
       </div>
     </div>
     <div class="combo-list" id="comboList"></div>
+    </div>
+
+    <!-- Overall Coverage + Balance Checker view -->
+    <div id="view-overall" style="display:none;flex:1;overflow:auto;padding:16px">
+      <div id="overallChartContent"></div>
+      <div id="balanceChartContent" style="margin-top:24px"></div>
+      <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">⚔️ Offensive Coverage Checker</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px">Pick up to 3 attack types to see what's NOT covered (no SE hit).</div>
+        <div id="covToolChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
+        <button onclick="runCovTool()" style="padding:7px 20px;background:var(--accent);border:none;color:white;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;margin-bottom:10px">Check Coverage</button>
+        <div id="covToolResult"></div>
+      </div>
+    </div>
+
+    <!-- Team Weakness Analyzer view -->
+    <div id="view-team" style="display:none;flex:1;overflow:auto;padding:16px">
+      <div id="teamAnalyzerContent"></div>
+    </div>
   </div>
 
   <!-- Side detail panel (slides in on combo click) -->
@@ -1103,6 +1148,183 @@ function exportPNG() {
   }
 }
 
+function openCodeExportModal() {
+  document.getElementById('codeExportModal').style.display = 'flex';
+  refreshCodeExport();
+}
+function closeCodeExportModal() {
+  document.getElementById('codeExportModal').style.display = 'none';
+}
+
+function generateCode(format) {
+  const T = TYPES;
+  const toTypeName = t => 'TYPE_' + t.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+  const mult = (atk, def) => chart[atk]?.[def] ?? 1;
+
+  const effToMacro = v => {
+    if (v === 0)   return 'X(0.0)';
+    if (v === 0.5) return 'X(0.5)';
+    if (v === 2)   return 'X(2.0)';
+    if (v === 4)   return 'X(4.0)';
+    return '______';
+  };
+
+  if (format === 'pokeemerald') {
+    const maxLen = Math.max(...T.map(t => toTypeName(t).length));
+    const colWidth = 8; // width of each cell including comma+space
+    // Header comment line
+    const defHeader = T.map(t => t.slice(0,4).padEnd(colWidth)).join('');
+    let out = `const uq4_12_t gTypeEffectivenessTable[NUMBER_OF_MON_TYPES][NUMBER_OF_MON_TYPES] =\n`;
+    out += `{//                   Defender -->\n`;
+    out += ` //  Attacker        `;
+    out += T.map(t => t.slice(0,7).padEnd(colWidth)).join('') + '\n';
+    T.forEach(atk => {
+      const label = `    [${toTypeName(atk)}]`.padEnd(maxLen + 8);
+      const cells = T.map(def => {
+        const v = mult(atk, def);
+        return effToMacro(v).padEnd(colWidth - 2) + ', ';
+      }).join('');
+      out += `${label} = {${cells.trimEnd().replace(/,$/, '')}},\n`;
+    });
+    out += `};\n`;
+    return out;
+  }
+
+  if (format === 'hexmaniac') {
+    // GBA type effectiveness table format used by HexManiacAdvance / FireRed / Emerald
+    // Each non-neutral entry is 3 bytes: [attacker_id][defender_id][effectiveness]
+    // Effectiveness encoding: 0x00 = immune, 0x05 = 0.5x NVE, 0x14 = 2x SE
+    // Terminated by: FE FE 00 (foresight separator) then FF FF 00 (end marker)
+    // Type IDs follow standard GBA order for base types, then custom types appended
+
+    const GBA_TYPE_ORDER = ["Normal","Fighting","Flying","Poison","Ground","Rock","Bug","Ghost","Steel",
+      "Fire","Water","Grass","Electric","Psychic","Ice","Dragon","Dark","Fairy"];
+    // Build full type list: GBA order first, then any custom types
+    const ORIGINAL_18 = ["Normal","Fire","Water","Electric","Grass","Ice","Fighting","Poison","Ground",
+      "Flying","Psychic","Bug","Rock","Ghost","Dragon","Dark","Steel","Fairy"];
+    const customTypes = TYPES.filter(t => !ORIGINAL_18.includes(t));
+    const orderedTypes = [...GBA_TYPE_ORDER.filter(t => TYPES.includes(t)), ...customTypes];
+    const typeId = {};
+    orderedTypes.forEach((t, i) => { typeId[t] = i; });
+
+    const effByte = v => {
+      if (v === 0)   return 0x00;
+      if (v === 0.5) return 0x05;
+      if (v === 2)   return 0x14;
+      if (v === 4)   return 0x28; // Gen 1 quirk, rare
+      return null; // neutral — omit
+    };
+
+    const entries = [];
+    TYPES.forEach(atk => {
+      TYPES.forEach(def => {
+        const v = chart[atk]?.[def] ?? 1;
+        const b = effByte(v);
+        if (b !== null) {
+          entries.push([typeId[atk] ?? 0, typeId[def] ?? 0, b]);
+        }
+      });
+    });
+
+    // Build hex dump output (text format readable by HexManiacAdvance table editor)
+    let out = `// HexManiacAdvance — GBA Type Effectiveness Table\n`;
+    out += `// Paste this into your table at the type chart offset\n`;
+    out += `// Format: [Attacker ID] [Defender ID] [Effectiveness]\n`;
+    out += `// 0x00=immune  0x05=0.5x(NVE)  0x14=2x(SE)\n\n`;
+    out += `// Type ID mapping:\n`;
+    orderedTypes.forEach((t, i) => {
+      out += `//   0x${i.toString(16).padStart(2,'0').toUpperCase()} = ${t}\n`;
+    });
+    out += `\n// --- Table entries (omits neutral 1x) ---\n`;
+    entries.forEach(([a, d, e]) => {
+      out += `${a.toString(16).padStart(2,'0').toUpperCase()} ${d.toString(16).padStart(2,'0').toUpperCase()} ${e.toString(16).padStart(2,'0').toUpperCase()}  // ${orderedTypes[a]} vs ${orderedTypes[d]}: ${e===0?'0x (immune)':e===0x05?'0.5x (NVE)':e===0x14?'2x (SE)':'4x'}\n`;
+    });
+    out += `FE FE 00  // Foresight/Scrappy separator\n`;
+    out += `FF FF 00  // End of table\n\n`;
+    out += `// Total non-neutral entries: ${entries.length}\n`;
+    out += `// Table size: ${(entries.length + 2) * 3} bytes\n`;
+    return out;
+  }
+
+  if (format === 'simple') {
+    let out = `// Type Effectiveness Table — generated by Pokémon Type Chart Studio\n`;
+    out += `// Rows = Attacker, Cols = Defender\n`;
+    out += `// Values: 0=immune, 50=NVE, 100=neutral, 200=SE\n\n`;
+    out += `const int typeChart[${T.length}][${T.length}] = {\n`;
+    T.forEach((atk, ai) => {
+      const cells = T.map(def => {
+        const v = mult(atk, def);
+        return String(Math.round(v * 100)).padStart(4);
+      }).join(',');
+      out += `    /* ${atk.padEnd(12)} */ {${cells} }${ai < T.length-1 ? ',' : ''}\n`;
+    });
+    out += `};\n\n`;
+    out += `// Type names in order:\n`;
+    out += `// ` + T.map((t,i) => `[${i}]=${t}`).join(', ') + '\n';
+    return out;
+  }
+
+  if (format === 'csharp') {
+    let out = `// Type Effectiveness Table — generated by Pokémon Type Chart Studio\n`;
+    out += `public static readonly float[,] TypeChart = new float[${T.length}, ${T.length}] {\n`;
+    T.forEach((atk, ai) => {
+      const cells = T.map(def => String(mult(atk, def)).padStart(5)).join(',');
+      out += `    /* ${atk.padEnd(12)} */ {${cells} }${ai < T.length-1 ? ',' : ''}\n`;
+    });
+    out += `};\n\n`;
+    out += `public static readonly string[] TypeNames = { ${T.map(t => `"${t}"`).join(', ')} };\n`;
+    return out;
+  }
+
+  if (format === 'python') {
+    let out = `# Type Effectiveness Table — generated by Pokémon Type Chart Studio\n`;
+    out += `TYPE_CHART = {\n`;
+    T.forEach(atk => {
+      out += `    "${atk}": {\n`;
+      T.forEach(def => {
+        const v = mult(atk, def);
+        if (v !== 1) out += `        "${def}": ${v},\n`;
+      });
+      out += `    },\n`;
+    });
+    out += `}\n`;
+    return out;
+  }
+
+  if (format === 'json_flat') {
+    const obj = {};
+    T.forEach(atk => {
+      obj[atk] = {};
+      T.forEach(def => { obj[atk][def] = mult(atk, def); });
+    });
+    return JSON.stringify(obj, null, 2);
+  }
+
+  return '';
+}
+
+function refreshCodeExport() {
+  const fmt = document.getElementById('codeFormatSelect').value;
+  document.getElementById('codeExportContent').textContent = generateCode(fmt);
+}
+
+function copyCodeExport() {
+  const txt = document.getElementById('codeExportContent').textContent;
+  navigator.clipboard.writeText(txt).then(() => showToast('Copied to clipboard!'));
+}
+
+function downloadCodeExport() {
+  const fmt = document.getElementById('codeFormatSelect').value;
+  const txt = document.getElementById('codeExportContent').textContent;
+  const ext = fmt === 'python' ? 'py' : fmt === 'json_flat' ? 'json' : fmt === 'csharp' ? 'cs' : fmt === 'hexmaniac' ? 'txt' : 'c';
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `type-chart.${ext}`;
+  a.click();
+  showToast(`Downloaded type-chart.${ext}`);
+}
+
 function exportCSV() {
   // Header row: blank corner + defending type names
   const rows = [['ATK \\ DEF', ...TYPES]];
@@ -1365,11 +1587,32 @@ function removeSelectedChange() {
 
 function renderSidePanel() {
   const el = document.getElementById("side-panel");
+
+  const heatmapLegend = heatmapActive ? `
+    <div style="margin-bottom:12px;padding:10px 12px;background:rgba(247,208,44,0.06);border:1px solid rgba(247,208,44,0.3);border-radius:8px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.5px;color:#f7d02c;margin-bottom:8px">🌡 HEATMAP ACTIVE</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;background:linear-gradient(90deg,rgba(99,144,240,0.15),rgba(99,144,240,0.6));flex-shrink:0;border:1px solid rgba(99,144,240,0.4)"></div>
+          <span style="font-size:10px;color:var(--dim2)"><span style="color:#6390f0;font-weight:700">Blue bar</span> on rows — offensive threat score. Brighter = hits more types SE.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;background:linear-gradient(90deg,rgba(249,85,135,0.15),rgba(249,85,135,0.6));flex-shrink:0;border:1px solid rgba(249,85,135,0.4)"></div>
+          <span style="font-size:10px;color:var(--dim2)"><span style="color:#f95587;font-weight:700">Pink bar</span> on columns — defensive vulnerability. Brighter = more types hit it SE.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,rgba(99,144,240,0.3),rgba(249,85,135,0.3));flex-shrink:0;border:1px solid var(--border)"></div>
+          <span style="font-size:10px;color:var(--dim2)"><span style="color:#a98fff;font-weight:700">Cell tint</span> — combined threat. Pink tint = high danger matchup, blue = low threat.</span>
+        </div>
+        <button onclick="toggleHeatmap()" style="margin-top:4px;width:100%;padding:4px;background:rgba(247,208,44,0.1);border:1px solid rgba(247,208,44,0.3);color:#f7d02c;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700">Turn Off Heatmap</button>
+      </div>
+    </div>` : '';
+
   const tabBar = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid var(--border)">
     <button onclick="sidePanelTab='types';renderSidePanel()" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid ${sidePanelTab==='types'?'var(--yellow)':'transparent'};color:${sidePanelTab==='types'?'var(--yellow)':'var(--dim)'};cursor:pointer">TYPE INFO</button>
     <button onclick="sidePanelTab='changelog';renderSidePanel()" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid ${sidePanelTab==='changelog'?'var(--yellow)':'transparent'};color:${sidePanelTab==='changelog'?'var(--yellow)':'var(--dim)'};cursor:pointer">CHANGELOG${changes.length?` (${changes.length})`:''}</button>
     <button onclick="sidePanelTab='saves';renderSidePanel()" style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;letter-spacing:.5px;background:none;border:none;border-bottom:2px solid ${sidePanelTab==='saves'?'var(--yellow)':'transparent'};color:${sidePanelTab==='saves'?'var(--yellow)':'var(--dim)'};cursor:pointer">SAVES</button>
-  </div>`;
+  </div>` + heatmapLegend;
 
   if (sidePanelTab === 'changelog') {
     let changelogHtml = `<div style="display:flex;flex-direction:column;gap:8px">`;
@@ -1565,25 +1808,70 @@ function resetZoom() {
   scaleChart();
 }
 
+let heatmapActive = false;
+
+function toggleHeatmap() {
+  heatmapActive = !heatmapActive;
+  const btn = document.getElementById('heatmapBtn');
+  if (btn) {
+    btn.style.color = heatmapActive ? '#f7d02c' : '';
+    btn.style.borderColor = heatmapActive ? '#f7d02c' : '';
+    btn.style.background = heatmapActive ? 'rgba(247,208,44,0.1)' : '';
+  }
+  renderEditor();
+}
+
+function computeHeatScores() {
+  // Offensive score: how many types does this attacker hit SE (higher = more threatening)
+  // Defensive score: how many types hit this type SE (higher = more vulnerable)
+  const offScore = {}, defScore = {};
+  TYPES.forEach(t => {
+    offScore[t] = TYPES.reduce((n, def) => n + (chart[t]?.[def] >= 2 ? 1 : 0), 0);
+    defScore[t] = TYPES.reduce((n, atk) => n + (chart[atk]?.[t] >= 2 ? 1 : 0), 0);
+  });
+  const maxOff = Math.max(...Object.values(offScore), 1);
+  const maxDef = Math.max(...Object.values(defScore), 1);
+  return { offScore, defScore, maxOff, maxDef };
+}
+
 function renderEditor() {
   const el = document.getElementById("chart");
   let html = "";
   html += `<div class="axis-label-row"><div class="axis-label-spacer"></div><div class="axis-label-text" style="width:${38*TYPES.length}px">DEFENDING →</div></div>`;
   html += `<div class="col-headers"><div class="axis-label-spacer" style="text-align:right;padding-right:8px;padding-bottom:4px;font-size:10px;color:var(--dim);letter-spacing:2px;font-weight:600">ATK ↓</div>`;
+
+  let heat = null;
+  if (heatmapActive) heat = computeHeatScores();
+
   TYPES.forEach(t => {
     const op = selectedType && selectedType!==t ? 0.25 : 1;
-    html += `<div class="col-header" onclick="selectType('${t}')"><div class="col-header-text" style="opacity:${op};display:flex;justify-content:center">${typeIcon(t, 18)}</div></div>`;
+    const defIntensity = heat ? (heat.defScore[t] / heat.maxDef) : 0;
+    const colHeat = heat ? `box-shadow:inset 0 -3px 0 rgba(249,85,135,${(defIntensity*0.9).toFixed(2)})` : '';
+    html += `<div class="col-header" onclick="selectType('${t}')" style="${colHeat}"><div class="col-header-text" style="opacity:${op};display:flex;justify-content:center">${typeIcon(t, 18)}</div></div>`;
   });
   html += `</div>`;
+
   TYPES.forEach(atk => {
     const rowOp = selectedType && selectedType!==atk ? 0.25 : 1;
-    html += `<div class="chart-row"><div class="row-label" style="opacity:${rowOp}" onclick="selectType('${atk}')"><span class="row-label-text" style="color:${TYPE_COLORS[atk]}">${atk.toUpperCase()}</span>${typeIcon(atk, 18)}</div>`;
+    const offIntensity = heat ? (heat.offScore[atk] / heat.maxOff) : 0;
+    const rowHeat = heat ? `border-left:3px solid rgba(99,144,240,${(offIntensity*0.9).toFixed(2)})` : '';
+    html += `<div class="chart-row"><div class="row-label" style="opacity:${rowOp};${rowHeat}" onclick="selectType('${atk}')"><span class="row-label-text" style="color:${TYPE_COLORS[atk]}">${atk.toUpperCase()}</span>${typeIcon(atk, 18)}</div>`;
     TYPES.forEach(def => {
       const val = chart[atk][def];
       const changed = isChanged(atk, def);
       const dimmed = selectedType && atk!==selectedType && def!==selectedType;
       const border = changed ? "2px solid var(--yellow)" : (atk===def ? "1px solid #2a2a3a" : "1px solid #1a1a28");
-      html += `<div class="cell" style="background:${EFF_BG[val]};border:${border};color:${EFF_TEXT[val]};opacity:${dimmed?0.12:1}"
+
+      // Heatmap overlay: blend threat colors into cells
+      let cellExtra = '';
+      if (heat && !dimmed) {
+        const offI = heat.offScore[atk] / heat.maxOff;
+        const defI = heat.defScore[def] / heat.maxDef;
+        const combined = (offI + defI) / 2;
+        cellExtra = `box-shadow:inset 0 0 0 38px rgba(${combined > 0.5 ? '249,85,135' : '99,144,240'},${(combined * 0.3).toFixed(2)})`;
+      }
+
+      html += `<div class="cell" style="background:${EFF_BG[val]};border:${border};color:${EFF_TEXT[val]};opacity:${dimmed?0.12:1};${cellExtra}"
         onclick="cycleCell('${atk}','${def}')"
         oncontextmenu="cycleCellReverse('${atk}','${def}');return false;"
         onmouseenter="showEditorTooltip('${atk}','${def}',event)"
@@ -1692,13 +1980,127 @@ function buildCombos() {
 // Called after every editor change — rebuilds combos and re-renders the list
 function onChartChanged() {
   buildCombos();
-  // Re-run filters on new data (preserves current search/filter/sort) — offense values recomputed
   applyFilters();
-  // If a combo is selected, refresh its detail panel
   if (selectedComboIdx !== null) renderDetailPanel();
+  if (mainTab === 'overall') { renderOverallChart(); renderBalanceChecker(); buildCovToolChips(); }
 }
 
-// ── Offensive Coverage Tool ───────────────────────────
+// ── Team Weakness Analyzer ──────────────────────────────
+const teamSlots = Array.from({length: 6}, () => [null, null, null]); // 6 slots, up to 3 types each
+
+function renderTeamAnalyzer() {
+  const el = document.getElementById('teamAnalyzerContent');
+  if (!el) return;
+
+  // Slot builder
+  const slotHtml = teamSlots.map((slot, si) => {
+    const filled = slot.filter(Boolean);
+    const slotColor = filled.length ? TYPE_COLORS[filled[0]] : 'var(--border)';
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <span style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:0.5px">SLOT ${si+1}</span>
+        ${filled.length ? `<span style="margin-left:auto;font-size:10px;cursor:pointer;color:var(--dim)" onclick="clearTeamSlot(${si})">✕ Clear</span>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[0,1,2].map(ti => {
+          const t = slot[ti];
+          return `<div style="flex:1;min-width:70px">
+            <select onchange="setTeamType(${si},${ti},this.value)"
+              style="width:100%;background:${t ? TYPE_COLORS[t]+'33' : 'var(--surface)'};border:1px solid ${t ? TYPE_COLORS[t] : 'var(--border)'};color:${t ? TYPE_COLORS[t] : 'var(--dim)'};border-radius:6px;padding:5px 6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">
+              <option value="">— Type ${ti+1} —</option>
+              ${TYPES.map(ty => `<option value="${ty}" ${t===ty?'selected':''}>${ty}</option>`).join('')}
+            </select>
+          </div>`;
+        }).join('')}
+      </div>
+      ${filled.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${filled.map(t => `<span style="display:inline-flex;align-items:center;gap:4px;background:${TYPE_COLORS[t]}22;color:${TYPE_COLORS[t]};font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">${typeIcon(t,12)}${t}</span>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Compute combined defense profile
+  const activeSlots = teamSlots.filter(s => s.some(Boolean));
+  let teamResultHtml = '';
+
+  if (activeSlots.length === 0) {
+    teamResultHtml = `<div style="text-align:center;padding:30px;color:var(--dim);font-size:12px">Select types for at least one slot to see the team profile.</div>`;
+  } else {
+    // For each defending type, collect multipliers across all filled slots
+    const typeProfile = {}; // t -> array of mults (one per slot)
+    TYPES.forEach(def => {
+      typeProfile[def] = activeSlots.map(slot => {
+        const filled = slot.filter(Boolean);
+        if (!filled.length) return 1;
+        return filled.reduce((mult, atk) => mult * (chart[atk]?.[def] ?? 1), 1);
+      });
+    });
+
+    // Count: how many slots are weak/resist/immune to each type
+    const weak2x = [], weak4x = [], resist = [], immune = [], neutral = [];
+    TYPES.forEach(def => {
+      const mults = typeProfile[def];
+      const weakCount = mults.filter(m => m >= 2).length;
+      const immuneCount = mults.filter(m => m === 0).length;
+      const resistCount = mults.filter(m => m > 0 && m < 1).length;
+      if (immuneCount === activeSlots.length) immune.push(def);
+      else if (weakCount >= Math.ceil(activeSlots.length / 2)) weak2x.push({ def, weakCount, mults });
+      else if (weakCount > 0) weak4x.push({ def, weakCount, mults });
+      else if (resistCount > 0) resist.push({ def, resistCount, mults });
+    });
+
+    const multTag = (def, mults) => {
+      const maxMult = Math.max(...mults);
+      const weakCount = mults.filter(m => m >= 2).length;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border)">
+        <span style="display:inline-flex;align-items:center;gap:3px;color:${TYPE_COLORS[def]};font-size:11px;font-weight:700">${typeIcon(def,12)}${def}</span>
+        <span style="font-size:10px;color:var(--dim)">${weakCount}/${activeSlots.length} slots weak</span>
+      </div>`;
+    };
+
+    const resistTag = (def, mults) => {
+      const resistCount = mults.filter(m => m > 0 && m < 1).length;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border)">
+        <span style="display:inline-flex;align-items:center;gap:3px;color:${TYPE_COLORS[def]};font-size:11px;font-weight:700">${typeIcon(def,12)}${def}</span>
+        <span style="font-size:10px;color:var(--dim)">${resistCount}/${activeSlots.length} slots resist</span>
+      </div>`;
+    };
+
+    const section = (title, color, items, tagFn) => items.length ? `
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:${color};letter-spacing:0.5px;margin-bottom:6px">${title} (${items.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${items.map(i => typeof i === 'string' ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:5px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:${TYPE_COLORS[i]};font-size:11px;font-weight:700">${typeIcon(i,12)}${i}</span>` : tagFn(i.def, i.mults)).join('')}</div>
+      </div>` : '';
+
+    teamResultHtml = `
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">Combined Team Defense Profile — ${activeSlots.length} Pokémon</div>
+      ${section('🔴 Major Weaknesses (majority of team)', '#f95587', weak2x, multTag)}
+      ${section('🟡 Partial Weaknesses (some slots)', '#f7d02c', weak4x, multTag)}
+      ${section('🟢 Resisted by some slots', '#4ade80', resist, resistTag)}
+      ${section('⚪ Full Team Immune', 'var(--dim)', immune, null)}
+      ${!weak2x.length && !weak4x.length ? '<div style="color:var(--green);font-size:12px;font-weight:700;padding:10px 0">✅ No major team-wide weaknesses!</div>' : ''}
+    `;
+  }
+
+  el.innerHTML = `
+    <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px">🫂 Team Weakness Analyzer</div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:16px">Select up to 3 types per Pokémon slot (up to 6 Pokémon). See your team's combined defensive coverage.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:20px">
+      ${slotHtml}
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      ${teamResultHtml}
+    </div>`;
+}
+
+function setTeamType(slotIdx, typeIdx, value) {
+  teamSlots[slotIdx][typeIdx] = value || null;
+  renderTeamAnalyzer();
+}
+
+function clearTeamSlot(slotIdx) {
+  teamSlots[slotIdx] = [null, null, null];
+  renderTeamAnalyzer();
+}
+
 let covSelectedTypes = new Set();
 
 function buildCovToolChips() {
@@ -1831,6 +2233,217 @@ function setTypeCount(tc) {
   typeCountFilter = tc;
   document.querySelectorAll('[data-tc]').forEach(b => b.classList.toggle('active', b.dataset.tc===tc));
   applyFilters();
+}
+
+let mainTab = 'combos';
+
+function setMainTab(tab) {
+  mainTab = tab;
+  document.getElementById('view-combos').style.display  = tab === 'combos'  ? 'flex'  : 'none';
+  document.getElementById('view-overall').style.display = tab === 'overall' ? 'block' : 'none';
+  document.getElementById('view-team').style.display    = tab === 'team'    ? 'block' : 'none';
+  ['combos','overall','team'].forEach(t => {
+    const btn = document.getElementById('mainTab-'+t);
+    if (!btn) return;
+    btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent';
+    btn.style.color = t === tab ? 'var(--text)' : 'var(--dim)';
+  });
+  if (tab === 'overall') { renderOverallChart(); renderBalanceChecker(); buildCovToolChips(); }
+  if (tab === 'team') renderTeamAnalyzer();
+}
+
+function renderBalanceChecker() {
+  const el = document.getElementById('balanceChartContent');
+  if (!el) return;
+
+  // Thresholds
+  const THRESHOLDS = {
+    atkSE:    { warn: 8,  danger: 11, label: 'Types hit SE',         mode: 'high' },
+    atkNVE:   { warn: 8,  danger: 11, label: 'Types resisted',       mode: 'high' },
+    atkImmune:{ warn: 3,  danger: 5,  label: 'Types immune to it',   mode: 'high' },
+    defWeak:  { warn: 5,  danger: 7,  label: 'Weaknesses',           mode: 'high' },
+    defResist:{ warn: 10, danger: 13, label: 'Resistances',          mode: 'high' },
+    defImmune:{ warn: 3,  danger: 5,  label: 'Immunities',           mode: 'high' },
+    noCounter:{ warn: 1,  danger: 1,  label: 'No SE counter exists', mode: 'flag' },
+  };
+
+  const flags = [];
+
+  TYPES.forEach(t => {
+    const typeFlags = [];
+
+    // Offense
+    let atkSE = 0, atkNVE = 0, atkImmune = 0;
+    TYPES.forEach(def => {
+      const v = chart[t]?.[def] ?? 1;
+      if (v >= 2) atkSE++;
+      else if (v === 0.5 || v === 0.25) atkNVE++;
+      else if (v === 0) atkImmune++;
+    });
+
+    // Defense
+    let defWeak = 0, defResist = 0, defImmune = 0;
+    TYPES.forEach(atk => {
+      const v = chart[atk]?.[t] ?? 1;
+      if (v >= 2) defWeak++;
+      else if (v === 0.5 || v === 0.25) defResist++;
+      else if (v === 0) defImmune++;
+    });
+
+    // No type hits it SE (uncounterable)
+    const noCounter = defWeak === 0;
+
+    const checks = { atkSE, atkNVE, atkImmune, defWeak, defResist, defImmune };
+    let severity = 'ok';
+
+    Object.entries(checks).forEach(([key, val]) => {
+      const th = THRESHOLDS[key];
+      let sev = 'ok';
+      if (val >= th.danger) sev = 'danger';
+      else if (val >= th.warn) sev = 'warn';
+      if (sev !== 'ok') {
+        typeFlags.push({ key, val, sev, label: th.label });
+        if (sev === 'danger' && severity !== 'danger') severity = 'danger';
+        else if (sev === 'warn' && severity === 'ok') severity = 'warn';
+      }
+    });
+
+    if (noCounter) {
+      typeFlags.push({ key: 'noCounter', val: 0, sev: 'danger', label: THRESHOLDS.noCounter.label });
+      severity = 'danger';
+    }
+
+    if (severity !== 'ok') {
+      flags.push({ type: t, severity, typeFlags, atkSE, atkNVE, atkImmune, defWeak, defResist, defImmune });
+    }
+  });
+
+  // Sort: danger first, then warn
+  flags.sort((a,b) => (a.severity === 'danger' ? -1 : 1) - (b.severity === 'danger' ? -1 : 1));
+
+  const sevColor = s => s === 'danger' ? '#f95587' : '#f7d02c';
+  const sevBg    = s => s === 'danger' ? 'rgba(249,85,135,0.1)' : 'rgba(247,208,44,0.1)';
+  const sevIcon  = s => s === 'danger' ? '🔴' : '🟡';
+
+  let html = `
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Balance Checker</div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:6px">Scans every type and flags potentially broken matchups.</div>
+    <div style="display:flex;gap:14px;font-size:10px;color:var(--dim);margin-bottom:16px;flex-wrap:wrap">
+      <span>🟡 Warning thresholds: 8+ SE hits · 8+ resisted · 3+ immunities given · 5+ weaknesses · 10+ resistances · 3+ immunities taken</span>
+      <span>🔴 Danger thresholds: 11+ SE hits · 5+ immunities given · 7+ weaknesses · no SE counter exists</span>
+    </div>`;
+
+  if (!flags.length) {
+    html += `<div style="text-align:center;padding:40px;color:var(--green);font-size:14px;font-weight:700">✅ No balance issues detected!</div>`;
+  } else {
+    html += `<div style="display:flex;flex-direction:column;gap:10px">`;
+    flags.forEach(({ type, severity, typeFlags, atkSE, atkNVE, atkImmune, defWeak, defResist, defImmune }) => {
+      html += `<div style="border:1px solid ${sevColor(severity)};border-radius:8px;padding:12px 14px;background:${sevBg(severity)}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          ${typeIcon(type, 20)}
+          <span style="font-size:13px;font-weight:800;color:${TYPE_COLORS[type]}">${type}</span>
+          <span style="font-size:10px;color:${sevColor(severity)};font-weight:700;margin-left:2px">${sevIcon(severity)} ${severity.toUpperCase()}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--dim)">ATK: ${atkSE}SE / ${atkNVE}NVE / ${atkImmune}immune &nbsp;·&nbsp; DEF: ${defWeak}weak / ${defResist}resist / ${defImmune}immune</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${typeFlags.map(f => `<span style="font-size:10px;padding:3px 8px;border-radius:4px;background:${sevBg(f.sev)};border:1px solid ${sevColor(f.sev)};color:${sevColor(f.sev)};font-weight:700">${sevIcon(f.sev)} ${f.label}${f.key !== 'noCounter' ? ': ' + f.val : ''}</span>`).join('')}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<div style="margin-top:12px;font-size:10px;color:var(--dim)">${flags.length} type${flags.length!==1?'s':''} flagged out of ${TYPES.length} total.</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+
+function renderOverallChart() {
+  const el = document.getElementById('overallChartContent');
+  if (!el) return;
+
+  // For each type, compute offense score, defense score, overall
+  // Offense: sum of log2(mult) across all defending types (SE=+1, NVE=-1, immune=-2, neutral=0)
+  // Defense: same but from the defender perspective (being hit)
+  const typeScores = TYPES.map(t => {
+    let offScore = 0;
+    TYPES.forEach(def => {
+      const v = chart[t]?.[def] ?? 1;
+      if (v === 2) offScore += 1;
+      else if (v === 4) offScore += 2;
+      else if (v === 0.5) offScore -= 1;
+      else if (v === 0.25) offScore -= 2;
+      else if (v === 0) offScore -= 3;
+    });
+    let defScore = 0;
+    TYPES.forEach(atk => {
+      const v = chart[atk]?.[t] ?? 1;
+      if (v === 2) defScore -= 1;
+      else if (v === 4) defScore -= 2;
+      else if (v === 0.5) defScore += 1;
+      else if (v === 0.25) defScore += 2;
+      else if (v === 0) defScore += 3;
+    });
+    return { type: t, off: offScore, def: defScore, overall: offScore + defScore };
+  });
+
+  // Find min/max for color scaling
+  const allVals = typeScores.flatMap(s => [s.off, s.def, s.overall]);
+  const maxAbs = Math.max(...allVals.map(Math.abs), 1);
+
+  const scoreColor = v => {
+    const norm = Math.max(-1, Math.min(1, v / maxAbs));
+    if (norm > 0) {
+      const g = Math.round(80 + norm * 80);
+      return `background:rgba(26,${g+50},58,0.9);color:#4ade80`;
+    } else if (norm < 0) {
+      const r = Math.round(80 + (-norm) * 80);
+      return `background:rgba(${r+50},20,30,0.9);color:#f95587`;
+    }
+    return `background:var(--surface2);color:var(--dim)`;
+  };
+
+  const cellStyle = `padding:6px 4px;text-align:center;font-size:11px;font-weight:700;border-radius:4px;min-width:52px`;
+  const hdrStyle = `padding:6px 8px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);letter-spacing:0.5px;white-space:nowrap`;
+  const rowLblStyle = `padding:6px 10px;font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--dim);background:var(--surface2);border-radius:4px;white-space:nowrap`;
+
+  let html = `
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Overall Type Coverage</div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:14px">How each type performs across all matchups. Green = advantage, Red = disadvantage.</div>
+    <div style="overflow-x:auto">
+    <table style="border-collapse:separate;border-spacing:3px;min-width:max-content">
+      <thead><tr>
+        <th style="${hdrStyle};text-align:left">TYPE →<br>STAT ↓</th>
+        ${typeScores.map(s => `<th style="${hdrStyle}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            ${typeIcon(s.type, 16)}
+            <span style="color:${TYPE_COLORS[s.type]};font-size:9px">${s.type.slice(0,4).toUpperCase()}</span>
+          </div>
+        </th>`).join('')}
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td style="${rowLblStyle}">OFFENSE</td>
+          ${typeScores.map(s => `<td style="${cellStyle};${scoreColor(s.off)}">${s.off > 0 ? '+' : ''}${s.off}</td>`).join('')}
+        </tr>
+        <tr>
+          <td style="${rowLblStyle}">DEFENSE</td>
+          ${typeScores.map(s => `<td style="${cellStyle};${scoreColor(s.def)}">${s.def > 0 ? '+' : ''}${s.def}</td>`).join('')}
+        </tr>
+        <tr>
+          <td style="${rowLblStyle};color:var(--yellow);border:1px solid var(--yellow)">OVERALL</td>
+          ${typeScores.map(s => `<td style="${cellStyle};${scoreColor(s.overall)};${s.overall === Math.max(...typeScores.map(x=>x.overall))?'outline:2px solid #4ade80':s.overall === Math.min(...typeScores.map(x=>x.overall))?'outline:2px solid #f95587':''}">${s.overall > 0 ? '+' : ''}${s.overall}</td>`).join('')}
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div style="margin-top:14px;font-size:10px;color:var(--dim)">
+      Scoring: SE hit = +1 pt &nbsp;|&nbsp; NVE = −1 pt &nbsp;|&nbsp; Immune = −3 pt &nbsp;|&nbsp; Defense scores are inverted (being resisted = good).<br>
+      Best overall: <span style="color:#4ade80;font-weight:700">${typeScores.sort((a,b)=>b.overall-a.overall)[0].type}</span> &nbsp;·&nbsp;
+      Worst overall: <span style="color:#f95587;font-weight:700">${typeScores[typeScores.length-1].type}</span>
+    </div>`;
+
+  el.innerHTML = html;
 }
 
 function setComboBarWidth(val) {
@@ -1979,6 +2592,7 @@ function selectCombo(gi, silent) {
   renderList();
   document.getElementById('ttDetail').classList.add('open');
   renderDetailPanel();
+
 }
 
 function closeDetail() {
@@ -2045,6 +2659,7 @@ function selectComboB(gi) {
 function setDetTab(tab) {
   detActiveTab = tab;
   renderDetailPanel();
+
 }
 
 function setCmpSubtab(tab) {
