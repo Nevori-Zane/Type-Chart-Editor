@@ -17,6 +17,40 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
 - Real-time stats and analysis
 - Compare any two type combinations side-by-side
 
+📊 Charts & Stats — New Tabs
+🗺 Balance & Overall Coverage
+
+A new sub-tab in Charts & Stats with three tools combined:
+
+Overall Coverage Chart
+A scoring table showing every type's OFFENSE, DEFENSE, and OVERALL score side by side. Scores are color-coded green (advantage) to red (disadvantage) based on how each type performs across all matchups.
+
+⚠️ Balance Checker
+Automatically scans every type and flags potentially broken matchups:
+- 🔴 Danger — 11+ types hit SE, 5+ immunities given, 7+ weaknesses, or no type hits it SE (uncounterable)
+- 🟡 Warning — 8+ types hit SE, 8+ resisted, 3+ immunities, 5+ weaknesses, 10+ resistances
+- Each flagged type shows a full stats card with color-coded issue badges. Updates live as you edit the chart.
+
+⚔️ Offensive Coverage Checker
+- Pick up to 3 attack types to see which types are NOT covered (no SE hit). Shows a coverage percentage bar and lists every gap with its actual multiplier.
+
+🫂 Team Weakness Analyzer
+ - A dedicated tab for analyzing full team defensive coverage:
+    - Set up to 6 Pokémon slots, each with up to 3 types (mono/dual/triple)
+    - Dropdowns are color-coded to the selected type
+    - Results update live showing:
+         🔴 Major Weaknesses — types that hit the majority of your team SE
+         🟡 Partial Weaknesses — types that hit some slots
+         🟢 Resistances — types some slots resist
+         ⚪ Full Team Immune — no slot is hit by these
+
+🔥Heatmap Overlay
+- Toggle the 🌡 Heatmap button to reveal a threat score overlay on the editor
+- Blue bars on row labels = offensive threat (how many types the attacker hits SE)
+- Pink bars on column headers = defensive vulnerability (how many types hit it SE)
+- Cell tints show combined danger — pink = high threat matchup, blue = low
+- A legend automatically appears in the right side panel explaining each element
+
 🔧 **Full Customization**
 - Add custom types with personalized colors
 - Load Gen 1, Gen 2–5, or Gen 6+ official charts
@@ -30,6 +64,7 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
 - Export as CSV spreadsheet
 - Save presets for easy sharing
 - Import custom JSON files
+- Export Code
 
 ⚡ **Professional UI**
 - Dark theme optimized for extended use
@@ -44,10 +79,6 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
 2. **Run** `Type-Chart-Editor-Setup.exe`
 4. **Launch** the application from your Desktop shortcut
 
-### System Requirements
-- **Windows 7 or later** (64-bit recommended)
-- No additional software required
-
 ## Quick Start
 
 1. **Open** Type Chart Editor
@@ -58,6 +89,7 @@ A powerful desktop application for creating, editing, and analyzing Pokémon typ
    - JSON for backup/sharing
    - PNG for documentation
    - CSV for spreadsheets
+   - Code for multiple code formats
 
 ## User Guide
 
@@ -124,6 +156,15 @@ Browse all type combinations with:
    - Open in Excel, Google Sheets, etc.
    - Easy data analysis
    - Import into other tools
+5. **Code Export**
+   -Export the chart in multiple code formats for direct use in your ROM hack or project:
+   - pokeemerald / pokefirered — exact decomp C array format with TYPE_NAME row labels and X(0.5) / X(2.0) macros
+   - HexManiacAdvance (GBA Binary Table) — 3-byte hex entries with type ID mapping, ready to paste into the GBA type chart offset
+   - Simple C Array — integer values (0/50/100/200) for any C project
+   - C# 2D Array — for Unity or MonoGame projects
+   - Python Dict — compact nested dictionary, only non-neutral values
+   - JSON Flat — full matrix as JSON
+   - All formats have a Copy and Download button inside the modal.
 
 ### Tips & Tricks
 
@@ -178,6 +219,17 @@ High-resolution chart image
 - Share in guides/wikis
 - Print-friendly
 
+### Code
+Export the chart in multiple code formats for direct use in your ROM hack or project:
+- pokeemerald / pokefirered — exact decomp C array format with TYPE_NAME row labels and X(0.5) / X(2.0) macros
+- HexManiacAdvance (GBA Binary Table) — 3-byte hex entries with type ID mapping, ready to paste into the GBA type chart offset
+- Simple C Array — integer values (0/50/100/200) for any C project
+- C# 2D Array — for Unity or MonoGame projects
+- Python Dict — compact nested dictionary, only non-neutral values
+- JSON Flat — full matrix as JSON
+All formats have a Copy and Download button inside the modal.
+
+
 ## FAQ
 
 **Q: Will my changes auto-save?**
@@ -206,6 +258,16 @@ A: Yes! Create unlimited custom types with personalized colors.
 Found a bug? Have a feature request? Please create an [issue](../../issues) on GitHub.
 
 ## Version History
+
+**v1.1.0** - First Update
+- Heatmap Overlay
+- Export Code (pokeemerald / pokefirered, GBA Binary Table, Simple C Array, ect..)
+- Overall Coverage Chart
+- Balance Checker
+- Offensive Coverage Checker
+- Team Weakness Analyzer
+- Changelog Improvements (Cell Notes, Multi-session .txt export)
+- Bug Fixes
 
 **v1.0.0** - Initial release
 - Full chart editor
