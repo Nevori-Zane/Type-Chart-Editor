@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokémon Type Chart</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<!-- ── Floating chart cell tooltip ── -->
+<div id="tooltip" style="
+  position:fixed; display:none; z-index:9999; pointer-events:none;
+  background:linear-gradient(135deg,#1a1a2e,#111120);
+  border:1px solid var(--border2); border-radius:10px;
+  padding:10px 14px; box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  flex-direction:column; gap:5px; min-width:160px;
+">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="tip-atk" style="font-weight:700;font-size:14px"></span>
+    <span style="color:#444;font-size:12px">⚔️ vs</span>
+    <span id="tip-def" style="font-weight:700;font-size:14px"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:7px;">
+    <span id="tip-eff" style="font-weight:800;font-size:20px;font-family:'Outfit',sans-serif"></span>
+    <span id="tip-label" style="font-size:12px;color:var(--dim2)"></span>
+  </div>
+  <span id="tip-was" style="font-size:10px;color:var(--yellow);display:none"></span>
+</div>
+
+<div class="topbar">
+  <div class="topbar-title">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;flex-shrink:0;transform:rotate(-15deg)">
+      <defs>
+        <linearGradient id="pbTopColor" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#f95587"/>
+          <stop offset="50%" stop-color="#6390f0"/>
+          <stop offset="100%" stop-color="#7AC74C"/>
+        </linearGradient>
+        <radialGradient id="pbTopShine" cx="35%" cy="25%" r="60%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.7"/>
+          <stop offset="50%" stop-color="#ffffff" stop-opacity="0.1"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0.2"/>
+        </radialGradient>
+        <radialGradient id="pbBotShine" cx="65%" cy="78%" r="55%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+          <stop offset="60%" stop-color="#ffffff" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#cccccc" stop-opacity="0.0"/>
+        </radialGradient>
+        <clipPath id="tc"><circle cx="13" cy="13" r="11.5"/></clipPath>
+        <clipPath id="topHalf"><rect x="0" y="0" width="26" height="13"/></clipPath>
+        <clipPath id="botHalf"><rect x="0" y="13" width="26" height="13"/></clipPath>
+      </defs>
+
+      <!-- outer black ring -->
+      <circle cx="13" cy="13" r="11.5" fill="#111" stroke="#111" stroke-width="0"/>
+
+      <!-- top half - gradient color -->
+      <circle cx="13" cy="13" r="11.5" fill="url(#pbTopColor)" clip-path="url(#topHalf)"/>
+      <!-- top shine -->
+      <circle cx="13" cy="13" r="11.5" fill="url(#pbTopShine)" clip-path="url(#topHalf)"/>
+
+      <!-- bottom half - white -->
+      <circle cx="13" cy="13" r="11.5" fill="#e8e8e8" clip-path="url(#botHalf)"/>
+      <!-- bottom shine -->
+      <circle cx="13" cy="13" r="11.5" fill="url(#pbBotShine)" clip-path="url(#botHalf)"/>
+
+      <!-- black center band -->
+      <rect x="1.5" y="11.2" width="23" height="3.6" fill="#111" clip-path="url(#tc)"/>
+
+      <!-- outer circle stroke -->
+      <circle cx="13" cy="13" r="11.5" stroke="#111" stroke-width="2" fill="none"/>
+
+      <!-- center button shadow -->
+      <circle cx="13" cy="13" r="3.8" fill="#111"/>
+      <!-- center button white fill -->
+      <circle cx="13" cy="13" r="2.8" fill="#e8e8e8"/>
+      <!-- center button inner ring -->
+      <circle cx="13" cy="13" r="2.8" stroke="#111" stroke-width="0.8" fill="none"/>
+      <!-- center button shine -->
+      <circle cx="12" cy="12" r="1.1" fill="#ffffff" opacity="0.9"/>
+    </svg>
+    <div style="display:flex;flex-direction:column;align-items:flex-end">
+      <span>Type Chart</span>
+      <span id="topbar-byline" style="font-family:'Outfit',sans-serif;font-weight:900;font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;margin-right:-6px;letter-spacing:0.5px">by Nҽʋι Zαɳҽ</span>
+    </div>
+  </div>
+  <div class="tab active" id="tab-editor" data-action="switch-tab" data-name="editor">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;vertical-align:middle"><path d="M20.7529,12.6376 C22.071,13.5791 22.2282,15.4788 21.0828,16.6242 L16.1469,21.5602 C15.8991,21.808 15.597,21.9947 15.2645,22.1055 L12.6922,22.963 C11.6826,23.2995 10.7411,22.301 11.1363,21.3129 L12.3771,18.2108 C12.5069,17.8863 12.7013,17.5916 12.9484,17.3444 L17.3757,12.9171 C18.2818,12.011 19.7102,11.8928 20.7529,12.6376 Z M17.75,3 C19.5449,3 21,4.45507 21,6.25 L21,11.6116 C20.5298,11.3476 20.0172,11.1979 19.5,11.1593 L19.5,10 L15.5,10 L15.5,13.3786 L13.3786,15.5 L10,15.5 L10,19.5 L10.7844,19.5 L10.1853,21 L6.25,21 C4.45507,21 3,19.5449 3,17.75 L3,6.25 C3,4.45507 4.45507,3 6.25,3 L17.75,3 Z M8.5,15.5 L4.5,15.5 L4.5,17.75 C4.5,18.668175 5.20710875,19.4211925 6.10647256,19.4941988 L6.25,19.5 L8.5,19.5 L8.5,15.5 Z M8.5,10 L4.5,10 L4.5,14 L8.5,14 L8.5,10 Z M14,10 L10,10 L10,14 L14,14 L14,10 Z M8.5,4.5 L6.25,4.5 C5.2835,4.5 4.5,5.2835 4.5,6.25 L4.5,8.5 L8.5,8.5 L8.5,4.5 Z M17.75,4.5 L15.5,4.5 L15.5,8.5 L19.5,8.5 L19.5,6.25 C19.5,5.331825 18.7928913,4.5788075 17.8935274,4.50580119 L17.75,4.5 Z M14,4.5 L10,4.5 L10,8.5 L14,8.5 L14,4.5 Z"/></svg> Editor
+  </div>
+  <div class="tab" id="tab-triple" data-action="switch-tab" data-name="triple">
+    <span class="tab-icon">📊</span> Charts & Stats
+  </div>
+  <div class="topbar-right">
+    <button id="themeToggleBtn" data-action="toggle-theme" title="Toggle light/dark mode" style="background:none;border:1px solid var(--border2);color:var(--dim2);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;line-height:1;transition:all 0.15s">🌙</button>
+    <div class="menu-wrap">
+      <button class="tbtn warn" data-action="toggle-menu" data-menu="importMenu" id="importMenuBtn">📂 Import ▾</button>
+      <div id="importMenu" class="dropdown-panel right w200">
+        <button data-action="trigger-import" data-target="import-file" data-close-menu="importMenu" class="mnu">
+          <div>💾 Import JSON</div>
+          <div class="mdesc">Full chart with history</div>
+        </button>
+        <button data-action="trigger-import" data-target="import-csv-file" data-close-menu="importMenu" class="mnu">
+          <div>📊 Import CSV</div>
+          <div class="mdesc">Matrix spreadsheet</div>
+        </button>
+        <button data-action="open-code-import" data-close-menu="importMenu" class="mnu">
+          <div>&lt;/&gt; Import Code</div>
+          <div class="mdesc">Paste C, Python, C#, HexManiac…</div>
+        </button>
+      </div>
+    </div>
+    <div class="menu-wrap">
+      <button class="tbtn" data-action="toggle-menu" data-menu="exportMenu" id="exportMenuBtn" title="Export options">
+        ⬇ Export ▾
+      </button>
+      <div id="exportMenu" class="dropdown-panel right w220">
+        <div class="menu-head">JSON</div>
+        <button data-action="export-json" data-close-menu="exportMenu" class="mnu menu-item-light">
+          <div style="font-weight:700">💾 Export with History</div>
+          <div class="mdesc">Includes changelog, notes & change highlights</div>
+        </button>
+        <button data-action="save-preset" data-close-menu="exportMenu" class="mnu menu-item-light">
+          <div style="font-weight:700">📦 Export Clean</div>
+          <div class="mdesc">No history — chart becomes the new baseline</div>
+        </button>
+        <div class="menu-sep"></div>
+        <div class="menu-head">OTHER FORMATS</div>
+        <button data-action="export-csv" data-close-menu="exportMenu" class="mnu menu-item-light">
+          <div style="font-weight:700">📊 Export CSV</div>
+          <div class="mdesc">Spreadsheet matrix — compatible with ROM tools</div>
+        </button>
+        <button data-action="open-code-export" data-close-menu="exportMenu" class="mnu menu-item-light">
+          <div style="font-weight:700">&lt;/&gt; Export Code</div>
+          <div class="mdesc">C, Python, C#, HexManiacAdvance & more</div>
+        </button>
+        <button data-action="open-ref-card" data-close-menu="exportMenu" class="mnu menu-item-light">
+          <div style="font-weight:700">🃏 Reference Card</div>
+          <div class="mdesc">Clean printable chart image — light or dark</div>
+        </button>
+      </div>
+    </div>
+    <input type="file" id="import-file" accept=".json" data-change="import-json">
+    <input type="file" id="import-csv-file" accept=".csv,.txt" data-change="import-csv" style="display:none">
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     EDITOR PANEL
+══════════════════════════════════════ -->
+<div class="panel editor-panel active" id="panel-editor">
+  <div class="editor-main">
+    <div class="legend" id="legend"></div>
+    <div class="editor-toolbar">
+      <button class="tbtn warn" data-action="clear-all">🗑 Clear The Chart</button>
+      <button class="tbtn warn" data-action="revert-baseline" title="Restore chart to last Export Clean snapshot">↺ Revert to Baseline</button>
+      <button class="tbtn" data-action="undo" title="Undo (Ctrl+Z)">↩ Undo</button>
+      <button class="tbtn" data-action="redo" title="Redo (Ctrl+Y)">↪ Redo</button>
+      <button id="heatmapBtn" class="tbtn" data-action="toggle-heatmap" title="Toggle threat score heatmap overlay">🌡 <span style="background:linear-gradient(90deg,#4ade80,#f7d02c,#f95587);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800">Heatmap</span></button>
+      <button id="countOverlayBtn" class="tbtn" data-action="toggle-count-overlay" title="Show SE count badges on row/column headers">🔢 Weakness Counter</button>
+      <button id="dualDefBtn" class="tbtn" data-action="toggle-dual-def" title="Set up to 2 secondary types per column to see combined dual/triple-type multipliers">⚔️ Dual/Triple Defender</button>
+      <span class="toolbar-divider"></span>
+      <div class="menu-wrap">
+        <button class="tbtn tbtn-c tbtn-yellow" data-action="toggle-menu" data-menu="typesMenu" id="typesMenuBtn" >✏️ Types ▾</button>
+        <div id="typesMenu" class="dropdown-panel left w160">
+          <button data-action="open-type-modal" data-mode="add" data-close-menu="typesMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#4ade80;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">＋ Add Type</button>
+          <button data-action="open-type-modal" data-mode="rename" data-close-menu="typesMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#f7d02c;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">✏️ Rename Type</button>
+          <button data-action="open-type-modal" data-mode="remove" data-close-menu="typesMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#f95587;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">− Remove Type</button>
+        </div>
+      </div>
+      <div class="menu-wrap">
+        <button class="tbtn tbtn-c tbtn-blue" data-action="toggle-menu" data-menu="genMenu" id="genMenuBtn" >📋 Load Gen ▾</button>
+        <div id="genMenu" class="dropdown-panel left w170">
+          <button data-action="load-gen" data-gen="1" data-close-menu="genMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#f7d02c;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">Gen 1 — 15 types (RBY)</button>
+          <button data-action="load-gen" data-gen="2" data-close-menu="genMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#6390f0;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">Gen 2–5 — 17 types (GSC–BW)</button>
+          <button data-action="load-gen" data-gen="6" data-close-menu="genMenu" style="width:100%;padding:7px 14px;background:none;border:none;color:#7AC74C;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;font-weight:700">Gen 6+ — 18 types (XY–present)</button>
+        </div>
+      </div>
+      <button class="tbtn tbtn-c tbtn-purple" data-action="open-randomize"  title="Randomize type matchups with constraints">🎲 Randomize</button>
+      <button id="symMirrorBtn" class="tbtn" data-action="toggle-sym-mirror" title="When on, setting A→B automatically sets B→A to the inverse value">⇄ Mirror</button>
+      <span class="autosave-status" id="autosave-status"></span>
+    </div>
+    <div class="chart-scroll">
+      <div class="chart-scale-wrapper" id="chart-scale-wrapper">
+        <div class="chart-inner" id="chart"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 0 4px;border-top:1px solid var(--border)">
+      <button data-action="set-zoom" data-delta="-0.1" class="zoom-btn">−</button>
+      <button data-action="reset-zoom" id="zoom-label" class="zoom-label-btn">100%</button>
+      <button data-action="set-zoom" data-delta="0.1" class="zoom-btn">+</button>
+      <div class="keyboard-legend">
+        <span class="keyboard-title">⌨️ KEYBOARD</span>
+        <span class="keyboard-item"><span class="kchip">↑↓←→</span> Move</span>
+        <span class="keyboard-item"><span class="kchip">0 1 2 3 4 5</span> Set value</span>
+        <span class="keyboard-item"><span class="kchip">Enter</span> Open menu</span>
+        <span class="keyboard-item"><span class="kchip">Esc</span> Deselect</span>
+      </div>
+    </div>
+
+  </div>
+  <div class="editor-side" id="side-panel"></div>
+</div>
+
+<!-- Type Add/Remove Modal -->
+<div id="typeModal" class="modal-overlay" style="background:rgba(0,0,0,0.7)" data-overlay-close="closeTypeModal">
+  <div class="modal-card pad20 w320">
+    <h3 id="typeModalTitle" style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text)"></h3>
+    <div id="typeModalBody"></div>
+  </div>
+</div>
+
+<!-- Randomize Modal -->
+<div id="randomizeModal" class="modal-overlay" style="background:rgba(0,0,0,0.8)" data-overlay-close="closeRandomizeModal">
+  <div class="modal-card pad20 w340" style="display:flex;flex-direction:column;gap:14px">
+    <div class="row8">
+      <span style="font-size:15px;font-weight:800;color:var(--text)">🎲 Randomize Chart</span>
+      <button data-action="close-randomize" class="modal-close-btn" style="margin-left:auto">✕</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+
+      <label style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:0.5px">SCOPE</label>
+      <div style="display:flex;gap:6px">
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">
+          <input type="radio" name="randScope" value="all" checked style="accent-color:var(--accent)"> Full Chart
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">
+          <input type="radio" name="randScope" value="changed" style="accent-color:var(--accent)"> Changed Only
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">
+          <input type="radio" name="randScope" value="custom" style="accent-color:var(--accent)"> Custom Types
+        </label>
+      </div>
+
+      <label style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:0.5px;margin-top:2px">CONSTRAINTS</label>
+
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600">Neutral (1×) chance</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="randNeutralPct" min="0" max="100" value="40"
+              style="width:48px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:12px;font-family:inherit;text-align:center"
+              data-input="sync-number-to-range" data-target="randNeutralSlider" data-min="0" data-max="100">
+            <span style="font-size:12px;color:var(--dim)">%</span>
+          </div>
+        </div>
+        <input type="range" id="randNeutralSlider" min="0" max="100" value="40" step="1"
+          style="width:100%;accent-color:var(--accent)"
+          data-input="sync-range-to-number" data-target="randNeutralPct">
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600">Immunity (0×) chance</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" id="randImmunePct" min="0" max="100" value="5"
+              style="width:48px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--text);font-size:12px;font-family:inherit;text-align:center"
+              data-input="sync-number-to-range" data-target="randImmuneSlider" data-min="0" data-max="100">
+            <span style="font-size:12px;color:var(--dim)">%</span>
+          </div>
+        </div>
+        <input type="range" id="randImmuneSlider" min="0" max="100" value="5" step="1"
+          style="width:100%;accent-color:var(--accent)"
+          data-input="sync-range-to-number" data-target="randImmunePct">
+        <div class="mdesc">Remaining % split between ½× and 2×.</div>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="randMaxWeakness" checked style="accent-color:var(--accent)">
+        <span>Max weaknesses per type: <strong id="randMaxWeaknessVal">6</strong></span>
+      </label>
+      <input type="range" id="randMaxWeaknessSlider" min="2" max="18" value="6" step="1"
+        style="accent-color:var(--accent);margin-top:-6px"
+        data-input="sync-text" data-target="randMaxWeaknessVal">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="randSymmetric" style="accent-color:var(--accent)">
+        Symmetric (ATK/DEF mirror each other)
+      </label>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:10px;color:var(--dim)">
+      ⚠️ This will overwrite your current chart. Make sure to save first via Export JSON or a Save Slot.
+    </div>
+
+    <div class="dialog-row">
+      <button data-action="close-randomize" class="dialog-btn secondary" style="flex:1">Cancel</button>
+      <button data-action="apply-randomize" class="dialog-btn primary" style="flex:2">🎲 Randomize!</button>
+    </div>
+  </div>
+</div>
+<!-- Reference Card Modal -->
+<div id="refCardModal" class="modal-overlay bg88 top-scroll" data-overlay-close="closeRefCardModal">
+  <div class="modal-card w1100 flex-col" style="background:#fff;border-radius:10px">
+    <div class="modal-header compact dark">
+      <span class="modal-title light">🃏 Quick Reference Card</span>
+      <div style="display:flex;gap:4px">
+        <button data-action="set-ref-card-gen" data-gen="current" id="rcBtn-current" class="modal-btn green-active fw7" style="font-size:10px">Current</button>
+        <button data-action="set-ref-card-gen" data-gen="1" id="rcBtn-1" class="modal-btn dark-outline fw7" style="font-size:10px">Gen 1</button>
+        <button data-action="set-ref-card-gen" data-gen="2" id="rcBtn-2" class="modal-btn dark-outline fw7" style="font-size:10px">Gen 2–5</button>
+        <button data-action="set-ref-card-gen" data-gen="6" id="rcBtn-6" class="modal-btn dark-outline fw7" style="font-size:10px">Gen 6+</button>
+      </div>
+      <button id="rcDarkBtn" data-action="toggle-ref-card-theme" class="modal-btn dark-surface fw7" style="font-size:11px;padding:5px 12px">🌙 Dark</button>
+      <button data-action="export-ref-card-png" class="modal-btn blue fw7" style="font-size:11px;padding:5px 14px">🖼 Export PNG</button>
+      <button data-action="close-ref-card" class="modal-btn dark-outline">✕</button>
+    </div>
+    <div id="refCardContent" class="modal-body-white"></div>
+  </div>
+</div>
+
+<div id="codeExportModal" class="modal-overlay bg85" data-overlay-close="closeCodeExportModal">
+  <div class="modal-card w900 flex-col">
+    <div class="modal-header">
+      <span class="modal-title">&lt;/&gt; Export Code — Decomp Format</span>
+      <select id="codeFormatSelect" data-change="refresh-code-export" class="select-ui">
+        <option value="pokeemerald">pokeemerald / pokefirered</option>
+        <option value="hexmaniac">HexManiacAdvance (GBA Binary Table)</option>
+        <option value="simple">Simple C Array</option>
+        <option value="csharp">C# 2D Array</option>
+        <option value="python">Python Dict</option>
+        <option value="json_flat">JSON Flat</option>
+      </select>
+      <button data-action="download-code-export" class="modal-btn accent fw7" style="padding:5px 14px">⬇ Download</button>
+      <button data-action="copy-code-export" class="modal-btn surface" style="padding:5px 14px">📋 Copy</button>
+      <button data-action="close-code-export" class="modal-btn outline">✕</button>
+    </div>
+    <pre id="codeExportContent" class="modal-content-dark"></pre>
+  </div>
+</div>
+
+<div class="panel triple-panel" id="panel-triple">
+  <div class="tt-sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Filter by Type</div>
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeAny" data-action="set-mode" data-mode="any">Any</button>
+        <button class="mode-btn" id="modeAll" data-action="set-mode" data-mode="all">All</button>
+        <button class="mode-btn" id="modeExact" data-action="set-mode" data-mode="exact">Exact</button>
+      </div>
+      <div class="type-chips" id="typeChips"></div>
+      <div style="margin-top:5px">
+        <span style="font-size:0.6rem;color:var(--dim);cursor:pointer;text-decoration:underline" data-action="clear-chips">✕ Clear</span>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Type Count</div>
+      <div class="sort-row">
+        <button class="sort-btn active" data-tc="all" data-action="set-type-count" data-type-count="all">All</button>
+        <button class="sort-btn" data-tc="1" data-action="set-type-count" data-type-count="1">Mono</button>
+        <button class="sort-btn" data-tc="2" data-action="set-type-count" data-type-count="2">Dual</button>
+        <button class="sort-btn" data-tc="3" data-action="set-type-count" data-type-count="3">Triple</button>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Sort By — Offense</div>
+      <div class="sort-row">
+        <button class="sort-btn active" data-sort="alpha" data-action="set-sort" data-sort-value="alpha">A–Z</button>
+        <button class="sort-btn" data-sort="wk-desc" data-action="set-sort" data-sort-value="wk-desc">Most SE</button>
+        <button class="sort-btn" data-sort="wk-asc" data-action="set-sort" data-sort-value="wk-asc">Fewest SE</button>
+        <button class="sort-btn" data-sort="res-desc" data-action="set-sort" data-sort-value="res-desc">Most NVE</button>
+        <button class="sort-btn" data-sort="imm-desc" data-action="set-sort" data-sort-value="imm-desc">Most 0×</button>
+        <button class="sort-btn" data-sort="vs-target" id="vsTargetSortBtn" data-action="set-sort" data-sort-value="vs-target" title="Sort by best ATK vs your target defender">Best vs Target</button>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Sort By — Defense</div>
+      <div class="sort-row">
+        <button class="sort-btn" data-sort="def-wk-asc" data-action="set-sort" data-sort-value="def-wk-asc">Fewest Weak</button>
+        <button class="sort-btn" data-sort="def-res-desc" data-action="set-sort" data-sort-value="def-res-desc">Most Resist</button>
+        <button class="sort-btn" data-sort="def-imm-desc" data-action="set-sort" data-sort-value="def-imm-desc">Most Immune</button>
+      </div>
+    </div>
+    <div class="sb-section" style="flex:1;overflow-y:auto">
+      <div class="sb-label">Stats (Filtered)</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val" id="sCount">987</div><div class="stat-lbl">Combos</div></div>
+        <div class="stat-box"><div class="stat-val" id="sWk">—</div><div class="stat-lbl">Avg ATK SE</div></div>
+        <div class="stat-box"><div class="stat-val" id="sRes">—</div><div class="stat-lbl">Avg ATK NVE</div></div>
+        <div class="stat-box"><div class="stat-val" id="sImm">—</div><div class="stat-lbl">Avg ATK 0×</div></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="sb-label" style="margin-bottom:6px">Target Defender</div>
+        <div style="font-size:9px;color:var(--dim);margin-bottom:6px;line-height:1.5">Set 1–3 types to see actual ATK effectiveness against that combo.</div>
+        <div id="targetDefSlots" style="display:flex;flex-direction:column;gap:4px">
+          <select data-change="set-target-def" data-slot="0" id="targetDefSel0" class="select-target">
+            <option value="">— Type 1 —</option>
+          </select>
+          <select data-change="set-target-def" data-slot="1" id="targetDefSel1" class="select-target">
+            <option value="">— Type 2 —</option>
+          </select>
+          <select data-change="set-target-def" data-slot="2" id="targetDefSel2" class="select-target">
+            <option value="">— Type 3 —</option>
+          </select>
+        </div>
+        <button data-action="clear-target-def" class="btn-clear-target">✕ Clear Target</button>
+      </div>
+      <div style="margin-top:10px">
+        <div class="sb-label" style="margin-bottom:6px">Compare</div>
+        <button id="sideCompareBtn" data-action="sidebar-start-compare" style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--dim2);font-size:0.65rem;padding:7px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.12s">
+          ⚡ Select two combos to compare
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tt-main">
+    <div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+      <button id="mainTab-combos" data-action="set-main-tab" data-tab="combos" class="ctab active-tab">📊 Combo Chart</button>
+      <button id="mainTab-overall" data-action="set-main-tab" data-tab="overall" class="ctab">🗺 Balance & Overall Coverage</button>
+      <button id="mainTab-team" data-action="set-main-tab" data-tab="team" class="ctab">🫂 Team & Moveset</button>
+      <button id="mainTab-tierlist" data-action="set-main-tab" data-tab="tierlist" class="ctab">🏆 Tier List</button>
+    </div>
+
+    <!-- Combo Chart view -->
+    <div id="view-combos" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">
+    <div class="tt-legend">
+      <span style="font-size:0.72rem;color:var(--dim);margin-right:4px;font-weight:700">ATK coverage:</span>
+      <div class="ll"><div class="ls" style="background:#1a1a4a"></div>0×</div>
+      <div class="ll"><div class="ls" style="background:#4a1020"></div>⅛×</div>
+      <div class="ll"><div class="ls" style="background:#6b2038"></div>¼×</div>
+      <div class="ll"><div class="ls" style="background:#8a2020"></div>½× NVE</div>
+      <div class="ll"><div class="ls" style="background:#2a2a3e"></div>1×</div>
+      <div class="ll"><div class="ls" style="background:#1a5c3a"></div>2× SE</div>
+      <div class="ll"><div class="ls" style="background:#1a8050"></div>4× SE</div>
+      <div class="ll"><div class="ls" style="background:#1aaa66"></div>8× SE</div>
+    </div>
+    <div class="list-bar">
+      <span id="resultCount">816 combinations</span>
+      <div class="view-toggle">
+
+      </div>
+      <div class="range-row">
+        <span class="range-label">BAR WIDTH</span>
+        <input type="range" id="comboZoom" min="300" max="1400" value="600" step="20" class="range-slider" data-input="set-combo-bar-width"/>
+        <span id="comboZoomLabel" class="range-value">600</span>
+      </div>
+    </div>
+    <div class="combo-list" id="comboList"></div>
+    </div>
+
+    <!-- Overall Coverage + Balance Checker view -->
+    <div id="view-overall" class="vpanel">
+      <div id="overallChartContent"></div>
+      <div id="balanceChartContent" style="margin-top:24px"></div>
+      <div id="symmetryChartContent" style="margin-top:24px"></div>
+    </div>
+
+    <!-- Team Weakness Analyzer view -->
+    <div id="view-team" class="vpanel">
+      <div id="teamAnalyzerContent"></div>
+      <div style="border-top:1px solid var(--border);margin-top:28px;padding-top:20px">
+        <div id="movesetCheckerContent"></div>
+      </div>
+    </div>
+
+    <!-- Tier List view -->
+    <div id="view-tierlist" class="vpanel">
+      <div id="tierListContent"></div>
+    </div>
+  </div>
+
+  <!-- Side detail panel (slides in on combo click) -->
+  <div class="tt-detail-side" id="ttDetail"></div>
+</div>
+
+<div id="codeImportModal" class="modal-overlay bg85" data-overlay-close="closeCodeImportModal">
+  <div class="modal-card w700 flex-col">
+    <div class="modal-header">
+      <span class="modal-title">&lt;/&gt; Import Code</span>
+      <span id="codeImportDetected" class="f10 dim" style="font-style:italic"></span>
+      <button data-action="close-code-import" class="modal-btn outline">✕</button>
+    </div>
+    <div class="modal-subhead">
+      Paste output from any Export Code format — C, C#, Python, JSON Flat, pokeemerald, or HexManiacAdvance. Format is auto-detected.
+    </div>
+    <textarea id="codeImportText" placeholder="Paste exported code here…"
+      style="flex:1;min-height:280px;background:#0d1117;color:#c9d1d9;border:none;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;resize:none;outline:none;line-height:1.5"
+      data-input="code-import-input"></textarea>
+    <div class="actions-row">
+      <button data-action="close-code-import" class="dialog-btn secondary flex1">Cancel</button>
+      <button data-action="apply-code-import" class="dialog-btn primary flex2">⬆ Import</button>
+    </div>
+  </div>
+</div>
+<div id="cellPopup">
+  <button id="cpBtn4" data-action="commit-cell-popup" data-value="4">4× Double Super Effective</button>
+  <button id="cpBtn2" data-action="commit-cell-popup" data-value="2">2× Super Effective</button>
+  <button id="cpBtn1" data-action="commit-cell-popup" data-value="1">1× Neutral</button>
+  <button id="cpBtnH" data-action="commit-cell-popup" data-value="0.5">½× Not Very Effective</button>
+  <button id="cpBtnQ" data-action="commit-cell-popup" data-value="0.25">¼× Barely Effective</button>
+  <button id="cpBtn0" data-action="commit-cell-popup" data-value="0">0× Immune</button>
+  <div id="cpFillDivider" style="border-top:1px solid rgba(255,255,255,0.1);margin:4px 0"></div>
+  <div id="cpFillRow" style="display:none">
+    <div style="font-size:9px;color:var(--dim);font-weight:700;letter-spacing:0.5px;padding:2px 10px 3px">FILL ROW</div>
+    <div style="display:flex;gap:2px;padding:0 6px 4px">
+      <button data-action="fill-row-popup" data-value="0"   style="flex:1;font-size:10px;padding:3px 0;background:#1a1a4a;border:1px solid #444;color:#6390f0;border-radius:4px;cursor:pointer">0×</button>
+      <button data-action="fill-row-popup" data-value="0.5" style="flex:1;font-size:10px;padding:3px 0;background:#3a1020;border:1px solid #444;color:#f95587;border-radius:4px;cursor:pointer">½×</button>
+      <button data-action="fill-row-popup" data-value="1"   style="flex:1;font-size:10px;padding:3px 0;background:#2a2a3e;border:1px solid #444;color:#888;border-radius:4px;cursor:pointer">1×</button>
+      <button data-action="fill-row-popup" data-value="2"   style="flex:1;font-size:10px;padding:3px 0;background:#1a5c3a;border:1px solid #444;color:#4ade80;border-radius:4px;cursor:pointer">2×</button>
+      <button data-action="fill-row-popup" data-value="4"   style="flex:1;font-size:10px;padding:3px 0;background:#1a8050;border:1px solid #444;color:#2ecc8a;border-radius:4px;cursor:pointer">4×</button>
+    </div>
+  </div>
+  <div id="cpFillCol" style="display:none">
+    <div style="font-size:9px;color:var(--dim);font-weight:700;letter-spacing:0.5px;padding:2px 10px 3px">FILL COL</div>
+    <div style="display:flex;gap:2px;padding:0 6px 4px">
+      <button data-action="fill-col-popup" data-value="0"   style="flex:1;font-size:10px;padding:3px 0;background:#1a1a4a;border:1px solid #444;color:#6390f0;border-radius:4px;cursor:pointer">0×</button>
+      <button data-action="fill-col-popup" data-value="0.5" style="flex:1;font-size:10px;padding:3px 0;background:#3a1020;border:1px solid #444;color:#f95587;border-radius:4px;cursor:pointer">½×</button>
+      <button data-action="fill-col-popup" data-value="1"   style="flex:1;font-size:10px;padding:3px 0;background:#2a2a3e;border:1px solid #444;color:#888;border-radius:4px;cursor:pointer">1×</button>
+      <button data-action="fill-col-popup" data-value="2"   style="flex:1;font-size:10px;padding:3px 0;background:#1a5c3a;border:1px solid #444;color:#4ade80;border-radius:4px;cursor:pointer">2×</button>
+      <button data-action="fill-col-popup" data-value="4"   style="flex:1;font-size:10px;padding:3px 0;background:#1a8050;border:1px solid #444;color:#2ecc8a;border-radius:4px;cursor:pointer">4×</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Fill Popup (right-click on row/col header) -->
+<div id="bulkFillPopup" style="display:none;position:fixed;z-index:10000;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:6px 0;box-shadow:0 6px 24px rgba(0,0,0,0.5);min-width:160px">
+  <div id="bfpTitle" style="font-size:10px;font-weight:700;color:var(--dim);letter-spacing:0.5px;padding:2px 12px 6px"></div>
+  <div style="display:flex;gap:3px;padding:0 8px 4px">
+    <button data-action="commit-bulk-fill" data-value="0"   style="flex:1;padding:5px 0;font-size:11px;font-weight:700;background:#1a1a4a;border:1px solid #444;color:#6390f0;border-radius:4px;cursor:pointer">0×</button>
+    <button data-action="commit-bulk-fill" data-value="0.5" style="flex:1;padding:5px 0;font-size:11px;font-weight:700;background:#3a1020;border:1px solid #444;color:#f95587;border-radius:4px;cursor:pointer">½×</button>
+    <button data-action="commit-bulk-fill" data-value="1"   style="flex:1;padding:5px 0;font-size:11px;font-weight:700;background:#2a2a3e;border:1px solid #444;color:#888;border-radius:4px;cursor:pointer">1×</button>
+    <button data-action="commit-bulk-fill" data-value="2"   style="flex:1;padding:5px 0;font-size:11px;font-weight:700;background:#1a5c3a;border:1px solid #444;color:#4ade80;border-radius:4px;cursor:pointer">2×</button>
+    <button data-action="commit-bulk-fill" data-value="4"   style="flex:1;padding:5px 0;font-size:11px;font-weight:700;background:#1a8050;border:1px solid #444;color:#2ecc8a;border-radius:4px;cursor:pointer">4×</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="./js/01-data-core.js"></script>
+<script src="./js/02-state-and-types.js"></script>
+<script src="./js/03-editor-actions.js"></script>
+<script src="./js/04-import-export.js"></script>
+<script src="./js/05-editor-rendering.js"></script>
+<script src="./js/06-combo-engine-team.js"></script>
+<script src="./js/07-combo-ui.js"></script>
+<script src="./js/08a-ui-action-registry.js"></script>
+<script src="./js/08f-ui-helpers.js"></script>
+<script src="./js/08g-ui-command-center.js"></script>
+<script src="./js/08h-app-state-store.js"></script>
+<script src="./js/08b-ui-actions-core.js"></script>
+<script src="./js/08c-ui-actions-import-export.js"></script>
+<script src="./js/08d-ui-actions-editor-modal.js"></script>
+<script src="./js/08e-ui-actions-combo.js"></script>
+<script src="./js/08-app-init.js"></script>
+</body>
+</html>
